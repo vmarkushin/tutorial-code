@@ -1,3 +1,9 @@
+\import Case (DecPred, Decide, NatEq, no, yes)
+\import Equality
+\import Exercises.EqualityProofsEx
+\import Logic.Meta
+\import Meta
+\import Paths.Meta
 
 -------------------------------------------------
 -- Hierarchies of universes, polymorphism
@@ -67,10 +73,55 @@
   | suc x, 0 => false
   | suc x, suc y => x < y
 
+
+\func absurd {A : \Type} (e : Empty) : A
+
+\func n<0 {n : Nat} (p : T (n < 0)) : Empty => {?}
+
+--  | z => r 0 {?}
+-- | o => r 1 (\lam k p' => \case k \as kk, idp : k = kk \with {
+-- | 0, p1 => rewrite p1 z
+-- | suc kk, p1 =>
+-- \let
+-- | zz => rewrite p1 p'
+-- \in absurd (not-n<0 zz
+
+-- (q: n > 0) (p : k < suc n) : Sigma (k' : Nat) (k' < n)
+
 \func Nat-ind (E : Nat -> \Type)
               (r : \Pi (n : Nat) -> (\Pi (k : Nat) -> T (k < n) -> E k) -> E n)
-              (n : Nat) : E n => {?} -- prove this as an exercise
+              (n : Nat) : E n
+  => r n (\lam k p =>
+      \let
+        | z => r 0 (\lam kk pp => absurd (n<0 pp))
+      \in Nat-ind-h E n k r p z)
+  \where {
+    \func Nat-ind-h
+      (E : Nat -> \Type)
+      (n k : Nat)
+      (r : \Pi (n : Nat) -> (\Pi (k : Nat) -> T (k < n) -> E k) -> E n)
+      (p : T (k < n))
+      (z : E 0)
+      : E k \elim n, k
+      | 0, 0 => absurd p
+      | 0, suc k => absurd p
+      | suc n, 0 => z
+      | n, suc k => Nat-ind-h E n k r {?} z
+--          \case NatEq.decideEq k n \with {
+--        | yes a =>
+--          \let
+--            | xx => rewrite a p
+--          \in
+--            Nat-ind-h E n (suc k) r {?} z
+--        | no _x => Nat-ind-h E n (suc k) r {?} z
+--      }
 
+    \func n<Sn
+      (n k : Nat)
+      (p : T (k < n))
+      (p' : T (0 < n))
+      : \Sigma (n' : Nat) (n = suc n') (T (n' < n)) => {?}
+  }
 -------------------------------------------------
 -- Induction-recusrion
 -------------------------------------------------

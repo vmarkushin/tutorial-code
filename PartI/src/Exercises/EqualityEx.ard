@@ -1,30 +1,36 @@
+\import Basics (id)
+\import Case (pred)
 \import Equality
 
 -- 1. Define congruence for functions with two arguments via transport.
 --    It is allowed to use any functions defined via transport.
 
-\func pmap2 {A B C : \Type} (f : A -> B -> C) {a a' : A} (p : a = a') {b b' : B} (q : b = b') : f a b = f a' b' => {?}
+\func pmap2 {A B C : \Type} (f : A -> B -> C) {a a' : A} (p : a = a') {b b' : B} (q : b = b') : f a b = f a' b'
+  => transport (\lam x => f a b = f a' x) q (transport (\lam y => f a b = f y b) p idp)
 
 -- 2. Prove that 'transport' can be defined via 'pmap' and 'repl' and vice versa.
 -- The function 'repl' says that if two types are equal then there exists a function between them.
 
 -- Define 'repl' via 'transport'.
-\func repl {A B : \Type} (p : A = B) (a : A) : B => {?}
+\func repl {A B : \Type} (p : A = B) (a : A) : B => transport (\lam x => x) p a
 
 -- Define 'transport' via 'repl' and 'pmap'.
-\func transport' {A : \Type} (B : A -> \Type) {a a' : A} (p : a = a') (b : B a) : B a' => {?}
+\func transport' {A : \Type} (B : A -> \Type) {a a' : A} (p : a = a') (b : B a) : B a'
+  => repl (pmap B p) b
 
 -- 3. Prove that left = right without using 'transport' or 'coe'.
 
-\func left=right : left = right => {?}
+\func left=right : left = right => path (\lam x => x)
 
 -- 4. Prove that a = a' and b = b' implies (a,b) = (a',b') without using 'transport'.
 
-\func pairEq {A B : \Type} {a a' : A} {b b' : B} (p : a = a') (q : b = b') : (a,b) = (a',b') => {?}
+\func pairEq {A B : \Type} {a a' : A} {b b' : B} (p : a = a') (q : b = b') : (a,b) = (a',b')
+  => path (\lam i => (p @ i, q @ i))
 
 -- 5. Prove that p = p' implies p.1 = p'.1 without using 'transport'.
 
-\func projEq {A : \Type} (B : A -> \Type) {p p' : \Sigma (x : A) (B x)} (t : p = p') : p.1 = p'.1 => {?}
+\func projEq {A : \Type} (B : A -> \Type) {p p' : \Sigma (x : A) (B x)} (t : p = p') : p.1 = p'.1
+  => path (\lam i => (t @ i).1)
 
 -- 6. Prove that (\lam x => not (not x)) = (\lam x => x).
 
@@ -32,9 +38,19 @@
   | true => false
   | false => true
 
-\func notNotId : (\lam x => not (not x)) = (\lam x => x) => {?}
+\func notNotId : (\lam x => not (not x)) = (\lam x => x)
+  =>
+    funExt (\lam _ => Bool) (\lam x => \case \elim x \with {
+      | false => idp
+      | true => idp
+    })
 
 -- 7. Define factorial via Nat-rec (i.e., without recursion and pattern matching).
+
+\func fact (n : Nat) : Nat
+  => Nat-elim (\lam _ => Nat) 1 (\lam n acc => (n Nat.+ 1) * acc) n
+
+\func tst : fact 4 = 24 => idp
 
 -- 8. Prove associativity of Nat.+ via Nat-elim (i.e., without recursion and pattern matching).
 
@@ -53,15 +69,25 @@
 --     Define a special case of coe via transport.
 --     Is it possible to define transport via coe0?
 
-\func coe0 (A : I -> \Type) (a : A left) : A right => {?}
+\func coe0 (A : I -> \Type) (a : A left) : A right
+  => transport A (path (\lam x => x)) a
+
+\func transport'' {A : \Type} (B : A -> \Type) {a a' : A} (p : a = a') (b : B a) : B a'
+  => coe0 (\lam i => B (p @ i)) b
 
 -- 12. Define a function B right -> B left.
 
-\func Itr' {B : I -> \Type} (b : B right) : B left => {?}
+\func Itr' {B : I -> \Type} (b : B right) : B left
+  => transport B (inv (path (\lam x => x))) b
 
 -- 13. Prove that 0 does not equal to suc x.
 
-\func zero/=suc (x : Nat) (p : 0 = suc x) : Empty => {?}
+\func true/=false (p : true = false) : Empty => transport T p unit
+
+\func zero/=suc (x : Nat) (p : 0 = suc x) : Empty => transport (\lam n => \case \elim n \with {
+  | 0 => Unit
+  | suc n => Empty
+}) p unit
 
 -- 14. Prove that fac does not equal to suc.
 
@@ -71,4 +97,7 @@
   | 0 => 1
   | suc n => suc n * fac n
 
-\func fac/=suc (p : fac = suc) : Empty => {?}
+\func funExt' {A B : \Type} {F G : A -> B} (p : F = G) : (\Pi (x : A) -> F x = G x)
+  => (\lam x => path (\lam i => (p @ i) x))
+
+\func fac/=suc (p : fac = suc) : Empty => zero/=suc 0 (pmap pred ((funExt' p) 1))

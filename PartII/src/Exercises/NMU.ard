@@ -1,0 +1,106 @@
+\import Algebra.Group
+\import Algebra.Monoid
+\import Data.Bool
+\import Data.Or
+\import Function
+\import Function.Meta ($)
+\import Logic
+\import Meta
+\import Paths
+\import Set
+
+-- Task 1. Define all different semigroup structures on set of 2 elementents.
+
+\module task1 \where {
+  \instance BoolDecSet : DecSet Bool
+    | decideEq x y => \case \elim x, \elim y \with {
+      | false, false => yes idp
+      | false, true => no (true/=false o inv)
+      | true, false => no true/=false
+      | true, true => yes idp
+    }
+
+  \func \infixl 8 xor (x y : Bool) : Bool \elim x
+    | false => y
+    | true => not y
+
+  \func g-xor : Group Bool \cowith
+    | ide => false
+    | * => xor
+    | ide-left {x} => \case \elim x \with {
+      | false => idp
+      | true => idp
+    }
+    | ide-right {x} => \case \elim x \with {
+      | false => idp
+      | true => idp
+    }
+    | *-assoc {x} {y} {z} => \case \elim x \with {
+      | false => idp
+      | true => \case \elim y \with {
+        | false => idp
+        | true => \case \elim z \with {
+          | false => idp
+          | true => idp
+        }
+      }
+    }
+    | inverse => (\lam x => x)
+    | inverse-left {x} => \case \elim x \with {
+      | false => idp
+      | true => idp
+    }
+    | inverse-right {x} => \case \elim x \with {
+      | false => idp
+      | true => idp
+    }
+
+  \func \infixl 9 === (x y : Bool) : Bool \elim x
+    | false => not y
+    | true => y
+
+  \func g-eq : Group Bool \cowith
+    | ide => true
+    | * => ===
+    | ide-left {x} => \case \elim x \with {
+      | false => idp
+      | true => idp
+    }
+    | ide-right {x} => \case \elim x \with {
+      | false => idp
+      | true => idp
+    }
+    | *-assoc {x} {y} {z} => \case \elim x \with {
+      | false => \case \elim y \with {
+        | false => \case \elim z \with {
+          | false => idp
+          | true => idp
+        }
+        | true => idp
+      }
+      | true => idp
+    }
+    | inverse => (\lam x => x)
+    | inverse-left {x} => \case \elim x \with {
+      | false => idp
+      | true => idp
+    }
+    | inverse-right {x} => \case \elim x \with {
+      | false => idp
+      | true => idp
+    }
+
+  \func proof (G : Group Bool) : Or (G = g-eq) (G = g-xor) =>
+    \let
+      mul => false G.* true
+    \in
+      \case \elim mul \with {
+        | false => inl (Group.equals G g-eq (Monoid.equals idp (\lam x y => \case \elim x, \elim y \with {
+          | false, false => {?}
+          | false, true => {?}
+          | true, false => {?}
+          | true, true => {?}
+        })))
+        | true => inr (Group.equals G g-xor (Monoid.equals idp {?}))
+      }
+}

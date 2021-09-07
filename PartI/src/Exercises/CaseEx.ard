@@ -1,7 +1,14 @@
 \import Case
+\import Meta
+\import Paths (*>)
+\import Paths.Meta
 
 -- 1. Implement any sorting algorithm using \case for pattern matching on the result of comparison of elements
 -- of a list.
+
+\func merge-sort {A : \Type} (xs : List A) : List A \elim xs
+  | nil => nil
+  | cons a xs => {?}
 
 -- 2. Define 'filter' via 'if' not using \case.
 --    Prove the lemma 'filter-lem' for this version of 'filter'.
@@ -12,15 +19,84 @@
 
 -- 3. Prove that, for every function f : Bool -> Bool and every x : Bool, it is true that f (f (f x)) = f x.
 
-\func Bool-lem (f : Bool -> Bool) (x : Bool) : f (f (f x)) = f x => {?}
+\func true/=false (p : true = false) : Empty => transport T p unit
+
+\func Bool-lem (f : Bool -> Bool) (x : Bool) : f (f (f x)) = f x
+  => \case \elim x \with {
+    | false => \case (f false) \as ff, idp : ff = f false, (f (f false)) \as fff, idp : fff = f (f false) \with {
+      | false, p, false, p' => rewriteI p (rewriteI p' idp)
+      | false, p, true, p' => rewriteI p (rewriteI p' (absurd (true/=false (inv (\let xx => rewriteI p p' \in p *> (inv xx))))))
+      | true, p, false, p' => {?}
+      | true, p, true, p' => {?}
+    }
+    | true => {?}
+  }
 
 -- 4. Define the view, which represents a natural number as a pair of the quotient and the remainder of
 -- division by a positive 'm'. Implement the division function.
 
-\data ModView (m n : Nat)
+\data ModView (n m : Nat)
   | quot-rem (q r : Nat) (t : T (r < m)) (p : n = q * m + r)
+-- 2 / 3
+-- 2 = 0 * 3 + 2
 
-\func mod-view (m n : Nat) (t : T (0 < m)) : ModView m n => {?}
+{-
+I. (10/4)
+ o o o o o o o o o o / o o o o (0) {0 * 4 + 10 = 10} -- 4 < 10, continue
+ o o o o o o / o o o o (1)         {1 * 4 + 6  = 10} -- 4 < 6, continue
+ o o / o o o o (2)                 {2 * 4 + 2  = 10} -- 4 !< 2, stop
+
+
+II. (4/6)
+ o o o o / o o o o o o (0)         {0 + 6 + 4 = 4} -- 6 !< 4, stop
+
+ -}
+\func mod-view (n m : Nat) (t : T (0 < m)) : ModView n m
+  => {?}
+  \where {
+    \func mod-view-helper (n m m' q : Nat) (t : T (0 < m)) : ModView n m \elim n, m'
+      | 0, 0 => quot-rem q 0 t (\case \elim q \with {
+        | 0 => {?}
+        | suc q => {?}
+      })
+      | 0, suc m' => {?}
+      | suc n, 0 => {?}
+      | suc n, suc m' => {?}
+
+    \func fin
+      (n m q : Nat)
+      (p : T (n < m))
+      : (ModView (q * m + n) m) => quot-rem q n p idp
+
+    \func step
+      (n m q : Nat)
+      (t : T (0 < m))
+      (p : m <= n)
+      (p2 : (\Sigma (n' : Nat) (q * m + n' = n)))
+      : (\Sigma
+          (n' : Nat)
+          ((suc q) * m + n' = n)
+          (Decide (T (n' < m)))
+        )
+      => {?}
+
+    -- TODO: impl inf descend
+    \func step-to-end
+      (n m q : Nat)
+      (t : T (0 < m))
+      (p : m <= n)
+      (p2 : (\Sigma (n' : Nat) (q * m + n' = n)))
+      : (\Sigma
+          (n' : Nat)
+          ((suc q) * m + n' = n)
+          (T (n' < m))
+        )
+      => \let s => step n m q t p p2 \in
+          \case s.3 \with {
+            | yes a => (s.1, s.2, a)
+            | no _x => {?}
+          }
+  }
 
 \func div (n m : Nat) (t : T (0 < m)) : Nat => {?}
 
@@ -59,4 +135,56 @@
 -- Equivalence of predicates
 \func \infix 4 <-> {A : \Type} (P Q : A -> \Type) => \Pi (x : A) -> \Sigma (P x -> Q x) (Q x -> P x)
 
-\func dbd {A : \Type} (P : \Sigma (P : A -> \Type) (DecPred P)) : (FromBoolToDec (FromDecToBool P)).1 <-> P.1 => {?}
+\func unfold_T (b : Bool) : T b = (\case \elim b \with {
+  | false => Empty
+  | true => Unit
+}) => \case \elim b \with {
+  | false => idp
+  | true => idp
+}
+
+\func tst {A : \Type} (P : \Sigma (P : A -> \Type) (DecPred P)) (x : A)
+  : (FromBoolToDec (FromDecToBool P)).1 x =
+   (\case (\case P.2 x \return Bool \with {
+  | yes _ => true
+  | no _ => false
+}) \with {
+  | true => Unit
+  | false => Empty
+  }) => {?}
+
+--  (\let bb => (\case P.2 x \with {
+--    | yes _ => true
+--    | no _ => false
+--  }) \in \case \elim bb \with {
+--  | true => Unit
+--  | false => Empty
+--  })
+
+\func dbd {A : \Type} (P : \Sigma (P : A -> \Type) (DecPred P))
+  : (FromBoolToDec (FromDecToBool P)).1 <-> P.1
+  => (\lam x => (\lam btd => \let
+     | d => P.2 x
+     | xx => unfold_T (\case P.2 x \with {
+       | yes _ => true
+       | no _ => false
+     })
+     | yy => rewrite xx btd
+     \in
+     \case d \as d', idp : d' = P.2 x \with {
+       | yes a, p => a
+       | no _x, p =>
+         \let
+          | zz => rewriteI p yy
+         \in absurd zz
+     }
+    , \lam dtb =>
+         \let
+          | d => P.2 x
+         \in
+           \case d \as d', idp : d' = P.2 x \with {
+             | yes a, p => \let
+               | zz => (FromBoolToDec (FromDecToBool P)).1 x
+                   \in rewrite tst (rewriteI p unit)
+             | no _x, p => absurd (_x dtb)
+           }))

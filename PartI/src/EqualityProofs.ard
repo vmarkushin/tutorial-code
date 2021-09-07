@@ -101,8 +101,11 @@
   : (xs v++ ys) v++ zs = transport (Vec A) (+-assoc k m n) (xs v++ (ys v++ zs)) \elim n, xs
   | 0, vnil => idp
   | suc n, vcons x xs =>
-    pmap (vcons x) (v++-assoc xs ys zs) *>
-    inv (transport-vcons-comm (+-assoc k m n) x (xs v++ (ys v++ zs)))
+  \let
+  xx => pmap (vcons x) (v++-assoc xs ys zs)
+  \in
+     {?}
+--    inv (transport-vcons-comm (+-assoc k m n) x (xs v++ (ys v++ zs)))
   \where
     -- transport commutes with all constructors
     -- here is the proof that it commutes with vcons

@@ -171,8 +171,23 @@
   | suc x, 0 => false
   | suc x, suc y => x < y
 
+-- 12 / 2 =
+
+\func mdiv (x y : Nat) => mdiv' x x y
+  \where
+    \func mdiv' (x x' y : Nat) : Nat \elim x'
+      | 0 => 0
+      | suc x' => if (x < y) 0 (suc (mdiv' (x - y) x' y))
+
 -- An obvious but not correct definition:
--- \func div (x y : Nat) : Nat => if (x < y) 0 (suc (div (x - y) y))
+--\func div'' (x y : Nat) : Nat
+--  => if (x < y) 0 (suc (div'' (x - y) y))
+
+\func tst : div'' 4 2 = 2 => idp
+\func tst' : div'' 0 2 = 0 => idp
+\func tst'' : div'' 2 0 = 2 => idp
+\func tst''' : mdiv 2 0 = 2 => idp
+
 
 \func div (x y : Nat) => div' x x y
   \where

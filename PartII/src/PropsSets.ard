@@ -73,7 +73,12 @@
 
 \func Mul-inc (m : MultipleOf3Or5) => m.1
 
--- \func Mul-inc-isInj (p : isInj Mul-inc) : Empty => {?}
+\func Disc {A B : \Type} (z : Either A B) : \Type \elim z
+  | inl _ => Unit
+  | inr _ => Empty
+
+\func Mul-inc-isInj (p : isInj Mul-inc) : Empty
+  => transport (\lam x => Disc x.2) (p (15, inl idp) (15, inr idp) idp) unit
 
 -------------------------------------------------
 -- Mere propositions

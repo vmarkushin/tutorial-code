@@ -163,7 +163,7 @@
 -- id-left x here is equivalent to id-left {+-NatMonoid} x
 \func +-test (x : Nat) : 0 Nat.+ x = x => ide-left x
 -- error, because +-NatMonoid is inferred, not *-NatMoniod
--- \func *-test (x : Nat) : 1 Nat.* x = x => id-left x
+-- \func *-test (x : Nat) : 1 Nat.* x = x => ide-left x
 
 \func instEx => +-NatMonoid.ide-left
 

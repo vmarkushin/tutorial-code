@@ -25,6 +25,19 @@
 -- Definition of =
 -------------------------------------------------
 
+\data Circle
+  | base
+  | loop I \with {
+    | left => base
+    | right => base
+  }
+
+\func ctoi (c : Circle) : I
+  | base => left
+  | loop i => i
+
+\func tst : Circle => base
+
 \func idp {A : \Type} {a : A} : a = a => path (\lam _ => a)
 
 \func pmap' {A B : \Type} (f : A -> B) {a a' : A} (p : a = a') : f a = f a'
@@ -61,6 +74,14 @@
                (x : Nat) : P x \elim x
   | zero => z
   | suc n => s n (Nat-elim P z s n)
+
+\func Nat-elim' (P : Nat -> \Type)
+               (z : P zero)
+               (n : Nat)
+               (s : \Pi (p : P n) -> P (suc n))
+               (x : Nat) : P x \elim x
+  | zero => z
+  | suc x => s n (Nat-elim P z s n)
 
 -- Non-dependent eliminator for Nat (recursion).
 \func Nat-rec (P : \Type)

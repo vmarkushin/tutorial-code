@@ -1,4 +1,9 @@
+\import Case (Bool, filter, pred, List, false, true)
+\open List
 \import EqualityProofs
+\import Function.Meta
+\import Meta
+\import Paths.Meta
 
 -- 1. The operator 'J' has a different form, which we denote 'Jalt'. Prove that 'J' and 'Jalt' are equivalent, i.e.
 -- define 'J' in terms of 'Jalt' and vice versa.
@@ -7,54 +12,238 @@
 
 \func Jalt {A : \Type} (B : \Pi (a a' : A) -> a = a' -> \Type)
            (b : \Pi (a : A) -> B a a idp)
-           {a a' : A} (p : a = a') : B a a' p => {?}
+           {a a' : A} (p : a = a') : B a a' p => J (B a) (b a) p
 
 -- Define 'J' via 'Jalt'. You can use only 'Jalt', 'idp' and everything definable in terms of these constructs (but not pattern matching on 'idp').
 -- See the end of this file for a hint.
 
-\func transport' {A : \Type} (B : A -> \Type) {a a' : A} (p : a = a') (b : B a) : B a' => {?}
+\func transport' {A : \Type} (B : A -> \Type) {a a' : A} (p : a = a') (b : B a)
+  : B a' =>
+--  J (\lam x q => B x) b p
+   Jalt (\lam x y q =>
+       \let
+        zlp => sigma-contr {_} {x} (y, q)
+            \in B {?}) (\lam x => b) p
 
-\func sigma-contr {A : \Type} {a : A} (p : \Sigma (x : A) (a = x)) : (a,idp) = {\Sigma (x : A) (a = x)} p => {?}
+\func sigma-contr {A : \Type} {a : A}
+                  (p : \Sigma (x : A) (a = x))
+  : (a,idp) = {\Sigma (x : A) (a = x)} p
+  => Jalt (\lam y z q => (y,idp) = {\Sigma (x : A) (y = x)} (z, q)) (\lam x => idp) p.2
 
 \func J' {A : \Type} {a : A} (B : \Pi (a' : A) -> a = a' -> \Type)
          (b : B a idp)
-         {a' : A} (p : a = a') : B a' p => {?}
+         {a' : A} (p : a = a') : B a' p => Jalt
+          (\lam x y q => B {?} {?})
+          (\lam x => {?}) p
 
 -- 2. Prove that 'vnil' is an identity for 'v++'.
 
-\func vnil-rightId {A : \Type} {n : Nat} (xs : Vec A n) : transport (Vec A) (+-comm 0 n) (xs v++ vnil) = xs => {?}
+--\func transport {A : \Type} (B : A -> \Type) {a a' : A} (p : a = a') (b : B a)
+--  => coe (\lam i => B (p @ i)) b right
+
+\func vnil-rightId {A : \Type} {n : Nat} (xs : Vec A n) : transport (Vec A) (+-comm 0 n) (xs v++ vnil) = xs \elim n, xs
+  | 0, vnil => idp
+  | suc n, vcons x xs =>
+    \let
+      | xx => pmap (vcons x) (vnil-rightId xs)
+      | yy => f (+-comm 0 n) x xs
+      \in
+     yy *> xx
+  \where
+    \func f {A : \Type} {n m : Nat} (p : 0 + n = m + 0) (x : A) (xs : Vec A n)
+      : transport (Vec A) (pmap suc p) (vcons x (xs v++ vnil)) = vcons x (transport (Vec A) p (xs v++ vnil))
+      | idp, _, _ => idp
+
 
 -- 3. Prove that all definitions of <= given in the module are equivalent.
 
+\func absurd {A : \Type} (e : Empty) : A
+
+\func zero/=suc (x : Nat) (p : 0 = suc x) : Empty => transport (\lam n => \case \elim n \with {
+  | 0 => Unit
+  | suc n => Empty
+}) p unit
+
+\func p1 : LessOrEq <-> LessOrEq'
+  => \lam x y => (f x y, g x y)
+  \where
+    \func f (x y : Nat) (loe : LessOrEq x y) : LessOrEq' x y
+      | 0, y', z<=n => z<=n' idp
+      | suc n, suc m, s<=s loe => s<=s' idp idp (f n m loe)
+
+    \func g (x y : Nat) (loe : LessOrEq' x y) : LessOrEq x y
+      | 0, 0, z<=n' p => z<=n
+      | 0, 0, s<=s' {n'} p p1 loe => absurd (zero/=suc n' p)
+      | 0, suc y, z<=n' p => z<=n
+      | 0, suc y, s<=s' p p1 loe => absurd (zero/=suc _ p)
+      | suc x, 0, z<=n' p => absurd (zero/=suc _ (inv p))
+      | suc x, 0, s<=s' p p1 loe => absurd (zero/=suc _ p1)
+      | suc x, suc y, z<=n' p => absurd (zero/=suc _ (inv p))
+      | suc x, suc y, s<=s' {n} {m} p p1 loe =>
+        \let
+          | pp => pmap pred p
+          | pp' => pmap pred p1
+        \in
+        \case pp \with {
+          | ppp => s<=s (g x y (transport (\lam x' => LessOrEq' x' y) (inv pp) (transport (\lam y' => LessOrEq' n y') (inv pp') loe)))
+        }
+
 -- 4. Define the membership predicate 'In' for lists.
 
-\data List (A : \Type) | nil | cons A (List A)
+--\data List (A : \Type) | nil | cons A (List A)
+
+\func ldrop {A : \Type} (xs : List A) : List A \elim xs
+  | nil => nil
+  | cons a xs => xs
+
+--\func head {A : \Type} (xs : List A) : A \elim xs
+--  | nil => nil
+--  | cons a xs => a
 
 \data In {A : \Type} (a : A) (xs : List A)
+  | here (ys : List A) (p : cons a ys = xs)
+  | there {b : A} {ys : List A} (p : cons b ys = xs) (In a ys)
+
+\func in-tst    : In 1 (cons 1 nil) => here _ idp
+\func in-tst'   : In 1 (cons 1 (cons 2 nil)) => here _ idp
+\func in-tst''  : In 1 (cons 2 (cons 1 nil)) => there idp (here _ idp)
+\func in-tst''' : In 1 (cons 3 (cons 2 (cons 1 nil))) => there idp (there idp (here _ idp))
 
 -- 5. Define reflexive and transitive closure of a relation.
 --    That is 'ReflTransClosure R' -- is the minimal reflexive and transitive relation containing R.
 
 \data ReflTransClosure {A : \Type} (R : A -> A -> \Type) (x y : A)
+  | rt-refl (p : x = y)
+  | rt-trans (a : A) (p1 : R x a) (p2 : ReflTransClosure R a y)
 
+{-
+(1,2) (2,3) (3,4)
+
+ReflTransClosure 1 4 = trans (trans (1,2) (2,3), trans (2,3) (3,4))
+ReflTransClosure 1 4 = trans (trans (1,2) (2,3), (3,4))
+ReflTransClosure 1 4 = trans ((1,2), trans ((2,3), (3,4))
+
+ReflTransClosure 1 4 = trans ((1,2), trans ((2,3), (3,4))
+
+ -}
 -- 6. Prove that if 'R' is already reflexive and transitive then 'ReflTransClosure R' is equivalent to 'R'.
 
 \func \infix 4 <-> {A : \Type} (P Q : A -> A -> \Type) => \Pi (x y : A) -> \Sigma (P x y -> Q x y) (Q x y -> P x y)
 
-\func ReflTransClosure-lem {A : \Type} (R : A -> A -> \Type) (refl : \Pi (x : A) -> R x x) (trans : \Pi (x y z : A) -> R x y -> R y z -> R x z) : R <-> ReflTransClosure R => {?}
+\func ReflTransClosure-lem {A : \Type} (R : A -> A -> \Type) (refl : \Pi (x : A) -> R x x) (trans : \Pi (x y z : A) -> R x y -> R y z -> R x z)
+  : R <-> ReflTransClosure R => \lam a b => (\lam r => rt-trans a (refl a) (rt-trans b r (rt-refl idp)), \lam rc => g R refl a b trans rc)
+\where
+  \func g {A : \Type} (R : A -> A -> \Type)
+          (refl : \Pi (x : A) -> R x x)
+          (a b : A)
+          (trans : \Pi (x y z : A) -> R x y -> R y z -> R x z)
+          (rc : ReflTransClosure R a b)
+    : R a b \elim rc
+    | rt-refl p => transport (\lam x => R a x) p (refl a)
+    | rt-trans a1 p1 p2 => trans a a1 b p1 (g R refl a1 b trans p2)
 
 -- 7. Define the predicate xs <= ys for lists, which says "the list xs is a sublist of ys".
 
+-- 1 2 3 4 5
+-- n y n y n
+-- - 2 - 4 -
+
+\func tail {A : \Type} (xs : List A) : List A \elim xs
+  | nil => nil
+  | cons x xs => xs
+
+\data Sublist {A : \Type} (xs : List A) (ys : List A) \elim xs, ys
+  | nil, ys => End
+  | cons x xs, cons y ys => Take (p : x = y) (sl : Sublist xs ys)
+  | xs, cons y ys => Drop (sl : Sublist xs ys)
+
+\func sl-test1 : (cons 1 (cons 3 nil)) <= (cons 1 (cons 2 (cons 3 nil)))
+  => Take idp (Drop (Take idp End))
+
+\func sl-test2 : nil <= (cons 1 (cons 2 (cons 3 nil)))
+  => Drop $ Drop $ Drop $ End
+
+\func sl-test5 : nil <= (cons 1 (cons 2 (cons 3 nil)))
+  => End
+
+\func sl-test3 {A : \Type} (xs : List A) : nil <= xs \elim xs
+  | nil => End
+  | cons x xs => Drop (sl-test3 xs)
+
+\func sl-test4 {A : \Type} (xs : List A) : xs <= xs \elim xs
+  | nil => End
+  | cons x xs => Take idp (sl-test4 xs)
+
+\data Sublist' {A : \Type} (xs : List A) (ys : List A)
+  | sublist (\Pi (x : A) -> In x xs -> In x ys)
+
+\func filter-list-is-sublist {A : \Type} (xs : List A) (f : A -> Bool) : filter f xs <= xs \elim xs
+  | nil => End
+  | cons x xs => \case f x \as fx, idp : f x = fx \with {
+    | false, p => rewrite p (Drop $ filter-list-is-sublist xs f)
+    | true, p => rewrite p (Take idp $ filter-list-is-sublist xs f)
+  }
+
+\func \infix 4 <= {A : \Type} (xs : List A) (ys : List A) : \Type => Sublist xs ys
+
+-- !!!KAL ALERT!!!
+{-
+\func filter-list-is-sublist' {A : \Type} (xs : List A) (f : A -> Bool) : filter f xs <= xs
+  => sublist (foo xs f)
+  \where {
+    \func foo {A : \Type}
+            (xs : List A)
+            (f : A -> Bool)
+            (x : A)
+            (inp : In x (filter f xs))
+      : In x xs \elim inp
+      | here ys p => cons-x-nil=filter-xs xs ys f x p
+      | there {b} {ys} p inp =>
+        \let
+          | xx => cons-x-nil=filter-xs xs ys f b p
+--          | pp : cons b ys = xs => {?}
+          | p2 : ys = tail (filter f xs) => {?}
+          | yy : In x xs => there {_} {_} {_} {b} {ys} p (foo {?} f x inp)
+--          | zz => rewrite p yy
+        \in {?}
+
+    \func cons-x-nil=filter-xs {A : \Type}
+                               (xs : List A)
+                               (ys : List A)
+                               (f : A -> Bool)
+                               (x : A)
+                               (p : cons x ys = filter f xs)
+      : In x xs \elim xs, ys
+      | cons z zs, ys => \case f z \as b, idp : f z = b \with {
+        | false, q =>
+          \let
+            | xx => rewrite q p
+          \in
+            there idp (cons-x-nil=filter-xs zs ys f x xx)
+        | true, q =>
+          \let
+            | xx => rewrite q p
+            | yy => (list-heads-eq _ _ _ _ xx).1
+          \in
+            rewrite yy (here _ idp)
+      }
+
+    \func list-heads-eq {A : \Type}
+                        (xs : List A)
+                        (ys : List A)
+                        (x : A)
+                        (y : A)
+                        (p : cons x xs = cons y ys)
+      : \Sigma (x = y) (xs = ys)
+    \elim xs, ys
+      | nil, nil => {?}
+      | nil, cons a ys => {?}
+      | cons a xs, nil => {?}
+      | cons a xs, cons a1 ys => {?}
+  }
+-}
+
 -- 8. Prove that 'filter xs <= xs' for any list xs.
-
-
-
-
-
-
-
-
-
 
 
 

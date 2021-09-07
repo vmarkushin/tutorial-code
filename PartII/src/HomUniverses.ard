@@ -51,6 +51,7 @@
 \func bak => \Type 30 66
 \func bak' => \66-Type 30
 \func bak'' => \66-Type
+\func bak''' => \62-Type
 
 -- The predicate saying "A has level suc-l - 1"
 \func hasLevel (A : \Type) (suc-l : Nat) : \Type \elim suc-l
@@ -72,11 +73,11 @@
 \func Trunc-Empty (t : Trunc Empty) : Empty \elim t
   | trunc a => a
 
-{-
+
 -- This does not typecheck!
 \func ex1 (t : Trunc Nat) : Nat
   | trunc n => n
--}
+
 
 -- But we can define 'ex2' since 0 = 0 is in \Prop.
 \func ex2 (t : Trunc Nat) : 0 = 0

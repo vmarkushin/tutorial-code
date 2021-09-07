@@ -1,3 +1,11 @@
+\import Arith.Nat
+\import Function.Meta
+\import HomUniverses (Dec, NatDecEq)
+\import Meta
+\import Paths (inv)
+\import Paths.Meta
+\import PropsSets
+
 \data Bool | false | true
 
 \data Empty
@@ -32,18 +40,53 @@
 --    Prove that if g `o` f is injective, then 'f' is also injective.
 
 -- Composition of functions
-\func \fixr 9 o {A B C : \Type} (g : B -> C) (f : A -> B) => \lam a => g (f a)
+\func \infixr 9 o {A B C : \Type} (g : B -> C) (f : A -> B) => \lam a => g (f a)
 
-\func o-inj {A B C : \Type} (f : A -> B) (g : B -> C) (p : isInj f) (q : isInj g) : isInj (g `o` f) => {?}
+\func o-inj {A B C : \Type}
+            (f : A -> B)
+            (g : B -> C)
+            (p : isInj f)
+            (q : isInj g)
+  : isInj (g o f)
+  => \lam x y => p x y o q (f x) (f y)
 
-\func o-inj' {A B C : \Type} (f : A -> B) (g : B -> C) (p : isInj (g `o` f)) : isInj f => {?}
+\func o-inj' {A B C : \Type} (f : A -> B) (g : B -> C) (p : isInj (g o f)) : isInj f
+  => \lam x y => p x y o pmap g
 
 -- 2. Define the predicate "divisible by 3 or by 5" in such a way that it is a proposition.
 --    Prove that 'MultipleOf3Or5' embeds in ℕ.
 
-\func isMultipleOf3Or5 (n : Nat) : \Type => {?}
+\func isMultipleOf3Or5 (n : Nat) : \Type => \case NatDecEq (mod3 n) 0, NatDecEq (mod5 n) 0 \with {
+  | Dec.yes e, Dec.yes e1 => Unit
+  | Dec.yes e, Dec.no _x => Unit
+  | Dec.no _x, Dec.yes e => Unit
+  | Dec.no _x, Dec.no _x1 => Empty
+}
+--    \let
+--  \in \case NatDecEq (mod3 n) 0 \as e1, NatDecEq (mod5 n) 0 \as e2, idp : NatDecEq (mod3 n) 0 = e1, idp : NatDecEq (mod5 n) 0 = e2 \with {
+--  | Dec.yes e, Dec.yes e1, p1, p2 => \let
+--  | xx => rewrite p1 (rewrite p2 yy)
+--  \in {?}
+--  | Dec.yes e, Dec.no _x, p1, p2 => {?}
+--  | Dec.no _x, Dec.yes e, p1, p2 => {?}
+--  | Dec.no _x, Dec.no _x1, p1, p2 => {?}
+--  }
 
-\func isMultipleOf3Or5-isProp (n : Nat) : isProp (isMultipleOf3Or5 n) => {?}
+-- NOTE: blya Valera zaebal. Admitted.
+\func isMultipleOf3Or5-isProp (n : Nat) : isProp (isMultipleOf3Or5 n) \elim n
+  | 0 => {?}
+  | 1 => {?}
+  | 2 => {?}
+  | 3 => {?}
+  | 4 => {?}
+  | 5 => {?}
+  | suc (suc (suc (suc (suc (suc n))))) => \lam x y => isMultipleOf3Or5-isProp n x y
+--  => \lam x y => \let yy => unfold isMultipleOf3Or5 x \in \case \elim x, \elim y \with {
+--    | 0, unit, unit => idp
+--    | 3, unit, unit => idp
+--    | 5, unit, unit => idp
+--    | suc (suc (suc (suc (suc (suc n))))), x, y => isMultipleOf3Or5-isProp n
+--  }
 
 \func MultipleOf3Or5 => \Sigma (n : Nat) (isMultipleOf3Or5 n)
 
@@ -59,18 +102,23 @@
 
 \func \infix 1 <-> (A B : \Type) => \Sigma (A -> B) (B -> A)
 
-\func isTriv-lem (A : \Type) : isTriv A <-> (\Sigma (isProp A) A) => {?}
+\func isTriv-lem (A : \Type) : isTriv A <-> (\Sigma (isProp A) A)
+  => (\lam it => (\lam x y => inv (it.2 x) *> it.2 y, it.1), \lam x => (x.2, \lam a => x.1 x.2 a))
 
 -- 4. Prove that 'Either' is not a proposition in general.
 
-\func Either-isProp (p : \Pi {A B : \Type} (pA : isProp A) (pB : isProp B) -> isProp (Either A B)) : Empty => {?}
+\func Either-isProp (p : \Pi
+  {A B : \Type}
+  (pA : isProp A)
+  (pB : isProp B) -> isProp (Either A B)
+) : Empty => {?}
 
 -- 5. Prove that '\Sigma' preserves propositions.
 
 \func Sigma-isProp {A : \Type} (pA : isProp A) (B : A -> \Type)
                    (pB : \Pi (x : A) -> isProp (B x))
   : isProp (\Sigma (x : A) (B x))
-  => {?}
+  => \lam a b => sigmaEq B a b (pA a.1 b.1) (pB b.1 (transport B (pA a.1 b.1) a.2) b.2)
 
 -- 6. Prove that <= and <=' are predicates.
 
@@ -78,17 +126,59 @@
   | 0, m => z<=n
   | suc n, suc m => s<=s (<= n m)
 
-\data <=' (n m : Nat) : \Set0 \elim m
+\data \infixl 9 <=' (n m : Nat) : \Set0 \elim m
   | suc m => <=-step (<=' n m)
   | m => <=-refl (n = m)
 
-\func <=-isProp {n m : Nat} : isProp (<= n m) => {?}
+\func <=-isProp {n m : Nat} : isProp (<= n m) \elim n, m
+  | 0, m => \lam x y => \case \elim x, \elim y \with {
+    | z<=n, z<=n => idp
+  }
+  | suc n, 0 => \lam x y => \case \elim x, \elim y \with {}
+  | suc n, suc m => \lam x y => \case \elim x, \elim y \with {
+    | s<=s x, s<=s y => pmap s<=s (<=-isProp x y)
+  }
 
 -- In the proof of <='-isProp it is allowed to use the fact that Nat is set
 -- without a proof. We will return to the proof of this fact later.
 \func Nat-isSet : isSet Nat => {?}
 
-\func <='-isProp {n m : Nat} : isProp (<=' n m) => {?}
+\func <=D {n m : Nat} (p : n <=' m) : \Type
+  | {n}, {suc m}, <=-step p => Unit
+  | <=-refl p => Empty
+
+\func absurd {A : \Type} (e : Empty) : A
+
+\func suc/=0 {n : Nat} (p : suc n = 0) : Empty => transport (\lam n => \case n \with { | 0 => Empty | suc _ => Unit }) p unit
+
+\func suc-sucks {n m : Nat} (p : (suc n) <=' (suc m)) : n <=' m \elim m
+  | 0 => \case \elim p \with {
+    | <=-step p => \case \elim p \with {
+      | <=-refl p1 => absurd (suc/=0 p1)
+    }
+    | <=-refl p => rewrite (pmap pred p) (<=-refl idp)
+  }
+  | suc m => \case \elim p \with {
+    | <=-step p => <=-step (suc-sucks p)
+    | <=-refl p => rewrite (pmap pred p) (<=-refl idp)
+  }
+
+\func <='-sucn<=n {n : Nat} (p : (suc n) <=' n) : Empty \elim n
+  | 0 => \case \elim p \with {
+    | <=-refl p => suc/=0 p
+  }
+  | suc n => <='-sucn<=n (suc-sucks p)
+
+\func <='-isProp {n m : Nat} : isProp (<=' n m) \elim m
+  | 0 => \lam x y => \case \elim x, \elim y \with {
+    | <=-refl p, <=-refl p1 => pmap <=-refl (Nat-isSet n 0 p p1)
+  }
+  | suc m => \lam x y => \case \elim x, \elim y \with {
+    | <=-step x, <=-step y => pmap <=-step (<='-isProp x y)
+    | <=-step x, <=-refl p => \let h => rewrite p x \in absurd (<='-sucn<=n h)
+    | <=-refl p, <=-step y => \let h => rewrite p y \in absurd (<='-sucn<=n h)
+    | <=-refl p, <=-refl p1 => pmap <=-refl (Nat-isSet n (suc m) p p1)
+  }
 
 -- 7. Prove that 'ReflClosure LessOrEq' is not a predicate, but 'ReflClosure (\lam x y => T (x < y))' is a predicate.
 

@@ -1,3 +1,5 @@
+\import Equality
+\import Exercises.EqualityProofsEx
 -------------------------------------------------
 -- Insertion sort and reverse
 -------------------------------------------------
@@ -63,7 +65,7 @@
 
 -- congruence, we'll give a definition later
 \func pmap {A B : \Type} (f : A -> B) {a a' : A} (p : a = a') : f a = f a'
-  => {?}
+  => transport f p path
 
 \func +-assoc (x y z : Nat) : (x + y) + z = x + (y + z) \elim z
   | 0 => idp

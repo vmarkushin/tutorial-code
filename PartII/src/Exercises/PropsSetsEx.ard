@@ -1,10 +1,15 @@
-\import Arith.Nat
+\import Algebra.Meta
+\import Equiv
+\import Equiv.Univalence
 \import Function.Meta
-\import HomUniverses (Dec, NatDecEq)
+\import Homotopy.Fibration
+\import Logic
 \import Meta
-\import Paths (inv, inv_*>)
+\import Paths
 \import Paths.Meta
-\import PropsSets
+\import PropsSets (MultipleOf3Or5, mod3, mod5)
+\import HomUniverses (Dec, NatDecEq, Unit, pred, unit)
+\import Sets (sigmaEq)
 
 \data Bool | false | true
 
@@ -71,14 +76,14 @@
 --  }
 
 -- NOTE: blya Valera zaebal. Admitted.
-\func isMultipleOf3Or5-isProp (n : Nat) : isProp (isMultipleOf3Or5 n) \elim n
-  | 0 => {?}
-  | 1 => {?}
-  | 2 => {?}
-  | 3 => {?}
-  | 4 => {?}
-  | 5 => {?}
-  | suc (suc (suc (suc (suc (suc n))))) => \lam x y => isMultipleOf3Or5-isProp n x y
+\func isMultipleOf3Or5-isProp (n : Nat) : isProp (isMultipleOf3Or5 n) => {?}
+--  | 0 => {?}
+--  | 1 => {?}
+--  | 2 => {?}
+--  | 3 => {?}
+--  | 4 => {?}
+--  | 5 => {?}
+--  | suc (suc (suc (suc (suc (suc n))))) => \lam x y => isMultipleOf3Or5-isProp n x y
 --  => \lam x y => \let yy => unfold isMultipleOf3Or5 x \in \case \elim x, \elim y \with {
 --    | 0, unit, unit => idp
 --    | 3, unit, unit => idp
@@ -145,7 +150,7 @@
   | {n}, {suc m}, <=-step p => Unit
   | <=-refl p => Empty
 
-\func absurd {A : \Type} (e : Empty) : A
+--\func absurd {A : \Type} (e : Empty) : A
 
 \func suc/=0 {n : Nat} (p : suc n = 0) : Empty => transport (\lam n => \case n \with { | 0 => Empty | suc _ => Unit }) p unit
 
@@ -226,97 +231,12 @@
 -- 9. Prove that a type with decidable equality is a set. Note that this implies 'isSet Nat' since
 -- we have already proved that 'Nat' has decidable equality.
 
-\func unyes {A : \Type} (w : Decide A) {a' : A} {p : w = yes a'} : A \elim w
-  | yes a => a
-  | no _x => absurd $ transport Dec-disc p ()
+\func AxiomK (A : \Type) : \Type => \Pi (x : A) (p : x = x) -> p = idp
 
-\func Dec-disc {A : \Type} (w : Decide A) : \Type \elim w
-  | yes _ => Empty
-  | no  _ => \Sigma
+\func Set->K {A : \Type} (w : isSet A) : AxiomK A
+  => \lam x p => (w x x) p idp
 
-\func Dec-disc' {A : \Type} (w : Decide A) : \Type \elim w
-  | yes _ => \Sigma
-  | no  _ => Empty
-
-\import Data.Maybe
-
-\func just-inj {A : \Type} {a b : A} (p : just a = just b) : a = b
-  => pmap (\lam m => \case \elim m \with {
-    | nothing => b
-    | just a1 => a1
-  }) p
-
-\func yes-inj {A : \Type} {a b : A} (p : yes a = yes b) : a = b
-  => pmap (\lam m => \case \elim m \with {
-    | yes a1 => a1
-    | no _x => a
-  }) p
-
-
---\func not-lemma (x : Bool) : not (not x) = x \elim x
---  | false => idp
---  | true => id
-
-\import Equiv.Univalence
-\import Equiv
-
-\func not (x : Bool) : Bool
-  | true => false
-  | false => true
-
-\func not-not (b : Bool) : not (not b) = b
-  | true => idp
-  | false => idp
-
-\func bool-not-iso : Bool = Bool => Equiv-to-= (\new Equiv {
-  | f => not
-  | ret => not
-  | ret_f => not-not
-  | sec => not
-  | f_sec => not-not
-})
-
-\func funExtInv {A B : \Type} {F G : A -> B} (p : F = G) : \Pi (x : A) -> F x = G x
-  => \lam x => path (\lam i => (p @ i) x)
-
-\func dec-isProp-bool=bool (p : isProp (Decide (Bool = Bool))) : Empty
-  => \let
---    | b=b : Decide (Bool = Bool) => yes idp
---    | b=b' : Decide (Bool = Bool) => yes bool-not-iso
-
-    | b=b : Bool = Bool => idp
-    | b=b' : Bool = Bool => bool-not-iso
-
-    | cont => p (yes b=b) (yes b=b')
-    | b=b-eq => =-to-Equiv b=b
-    | b=b'-eq => =-to-Equiv b=b'
-    | cont' => yes-inj cont
-    | ff : true = b=b-eq true => idp
-    | hh => pmap =-to-Equiv cont'
---    | gg : b=b'-eq true = false => unfold =-to-Equiv $ {?}
-    | gg : b=b'-eq true = false => unfold b=b'-eq $ unfold b=b' $ unfold bool-not-iso $ unfold =-to-Equiv $ {?}
---    | cont'-eq => =-to-Equiv cont'
---    | t => ff *> (rewriteI cont' gg)
-    | hh' => pmap (\lam (x : Equiv {Bool} {Bool}) =>
-        \let
-          | p : Bool => (Map.f {x}) true
-          \in
-        p
-    ) hh
---    | hh' => path (\lam i => Equiv.f {hh @ i} (unfold {?}))
-    \in
-     {?}
-
-\func dec-isProp-naeb : \Sigma (A : \Type) (x y : A) (p : isProp (Decide (x = y)) -> Empty)
-  => (\Type, Bool, Bool, dec-isProp-bool=bool)
---
---\func dec-isProp {A : \Type} (x y : A) : isProp (Decide (x = y))
---  => \lam a b => \case \elim a, \elim b \with {
---    | yes a, yes a1 => absurd $ dec-isProp-bool=bool
---    | yes a, no _x => {?}
---    | no _x, yes a => {?}
---    | no _x, no _x1 => {?}
---  }
+-- \func Jl {A : \Type} {a : A} (B : \Pi (a' : A) -> a = a' -> \Type) (b : B a idp) {a' : A} (p : a = a') : B a' p \elim p
 
 \func J
   {A : \Type} {a : A}
@@ -329,36 +249,148 @@
   \where
     \func psqueeze  {A : \Type} {a a' : A} (p : a = a') (i : I) : a = p @ i => path (\lam j => p @ I.squeeze i j)
 
+
 \func Jalt {A : \Type} (B : \Pi (a a' : A) -> a = a' -> \Type)
            (b : \Pi (a : A) -> B a a idp)
            {a a' : A} (p : a = a') : B a a' p => J (B a) (b a) p
 
---\func sigma-contr {A : \Type} {a : A}
---                  (p : \Sigma (x : A) (a = x))
---  : (a,idp) = {\Sigma (x : A) (a = x)} p
---  => Jalt (\lam y z q => (y,idp) = {\Sigma (x : A) (y = x)} (z, q)) (\lam x => idp) p.2
+\func K->Set {A : \Type} (w : AxiomK A) (a a' : A) (x y : a = a') : x = y \elim y
+  | idp => w a x
 
-\func ez : idp {_} {0} = idp => idp
+-- it is Decide
+-- \func LEM (A : \Type) : \Type => Not A `Either` A
 
--- 9. Prove that a type with decidable equality is a set. Note that this implies 'isSet Nat' since
--- we have already proved that 'Nat' has decidable equality.
+\func DNE (A : \Type) : \Type => Not (Not A) -> A
+
+\func Not-isProp {A : \Type} : isProp (Not A)
+  => \lam _ _ => ext
+
+\func DN-isProp {A : \Type} : isProp (Not (Not A))
+  => \lam _ _ => ext
+
+\func Decide->DNE {A : \Type} (p : Decide A) : DNE A \elim p
+  | no  a => \lam z => absurd (z a)
+  | yes b => \lam _ => b
+
+--    P x
+--             o
+--     o       o
+--     o   o   o
+--     o o o o o o
+--     | | | | | |
+-- A   o o o o o o   --- base
+--     x y z u v w
+--
+-- total space is Sigma (x : A) (P x)
+-- Pi (x : A) -> P x
+
+\func FiberMap {A : \Type} (P Q : A -> \Type) : \Type => \Pi (x : A) -> (P x -> Q x)
+
+\func Total
+  {A : \Type}
+  {P Q : A -> \Type}
+  (f : FiberMap P Q)
+  (w : \Sigma (x : A) (P x))
+  : \Sigma (x' : A) (Q x')
+  => (w.1, f w.1 w.2)
+
+--\func Total'
+--  {A : \Type}
+--  {P Q : A -> \Type}
+--  (f : FiberMap P Q) :
+--  \Sigma (x : A) (P x) -> \Sigma A (Q x))
+--  => (w.1, f w.1 w.2)
+
+\func Theorem272
+  {A : \Type}
+  {P : A -> \Type}
+  (w w' : \Sigma (x : A) (P x))
+  : (w = w') = (\Sigma (p : w.1 = w'.1) (transport P p w.2 = w'.2))
+  => exts (\new QEquiv {
+    | f q => rewrite q (idp, idp)
+    | ret z => ext z
+    | ret_f _ => idp
+    | f_sec _ => idp
+  })
+
+\func repl {A B : \Type} (p : A = B) (a : A) : B => transport (\lam x => x) p a
+
+--\func fib {A B : \Type}
+
+\func Theorem476
+  {A : \Type}
+  (P Q : A -> \Type)
+  (x : A)
+  (v : Q x)
+  (f : FiberMap P Q)
+  : Fib (\lam a => (x, f x a)) (x, v) = Fib (\lam a => f x a) v
+  => ext (\new QEquiv {
+    | f q => (q.1, pmap (\lam xx => xx.2) q.2)
+    | ret z => (z.1, pmap (\lam xx => (x, xx)) z.2)
+    | ret_f z =>
+      \let
+        | qq => z.1
+        | qq' => z.2
+      \in ext (idp, {?})
+    | f_sec _ => {?}
+  })
+
+\func Theorem477
+  {A : \Type}
+  (P Q : A -> \Type)
+  (g : FiberMap P Q)
+  (w : (\Sigma (x : A) (P x)) = (\Sigma (z : A) (Q z)))
+  (y : A)
+  : P y = Q y
+  => ext (\new QEquiv {
+    | f q => g y q
+    | ret z =>
+      \let
+        | l => repl (inv w) (y, z)
+        | r => transport (\lam x => x) w l
+        | t => Total g l
+        \in {?}
+    | ret_f _ => {?}
+    | f_sec _ => {?}
+  })
+
+\func Contr-Equiv
+  {A B : \Type}
+  (p : isTriv A)
+  (q : isTriv B)
+  : A = B
+  => ext (\new QEquiv {
+    | f _ => q.1
+    | ret _ => p.1
+    | ret_f => p.2
+    | f_sec => q.2
+  })
+
+\func pmap-id {A : \Type} {a b : A} (p : a = b) : pmap (\lam x => x) p = p
+  => idp
+
+\func sigma-contr {A : \Type} {a : A} : isTriv (\Sigma (x : A) (x = a))
+  => ((a, idp), \lam t => ext (inv t.2, simp_coe $ rewrite (pmap-id (inv t.2)) $ rewrite inv_*> idp))
+
+\func Theorem722
+  {A : \Type}
+  (R : A -> A -> \Type)
+  (RProp : \Pi (x y : A) -> isProp (R x y))
+  (rho : \Pi (x : A) -> R x x)
+  (g : \Pi (x y : A) -> R x y -> x = y)
+  : \Sigma (z : isSet A) (\Pi (x y : A) -> R x y = (x = y))
+  => ( {?}
+  , \lam x y => Theorem477 (R __ y) (__ = y) (g __ y)
+        ( Contr-Equiv ((y, rho y)
+                      , \lam t => ext (inv (g t.1 y t.2), RProp _ _ _ _)) sigma-contr
+        ) x
+  )
+
+\func DNE-eq->Set {A : \Type} (w : \Pi (x y : A) -> DNE (x = y)) : isSet A
+  => (Theorem722 (\lam x y => Not (Not (x = y))) (\lam _ _ _ _ => ext) (\lam _ c => c idp) w).1
 
 \func Dec-isSet {A : \Type} (dec : \Pi (x y : A) -> Decide (x = y)) : isSet A
   => DNE-eq->Set (\lam x y => Decide->DNE (dec x y))
-
-
-\func sda {A : \Type} {a : A} {b : A}
-          (peq : a = a)
-          (ppeq : peq = idp)
-          (p1 : a = b) (p2 : a = b)
-  : p1 = p2
-  => {?}
-
-\func pi {A : \Type} {a : A}
-         (d : \Pi (x y : A) -> Decide (x = y))
-         (peq : a = a)
-  : peq = idp
-  => {?}
 
 -- 10. Prove that if 'A' and 'B' are sets, then A `Either` B is also a set.
 

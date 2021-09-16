@@ -2,13 +2,11 @@
 \import Function.Meta
 \import HomUniverses (Dec, NatDecEq)
 \import Meta
-\import Paths (inv)
+\import Paths (inv, inv_*>)
 \import Paths.Meta
 \import PropsSets
 
 \data Bool | false | true
-
-\data Empty
 
 \data List (A : \Type) | nil | cons A (List A)
 
@@ -187,22 +185,179 @@
   | 0, suc _ => true
   | suc n, suc m => n < m
 
+\func n<n (n : Nat) : (n < n) = false
+  | 0 => idp
+  | suc n => n<n n
+
 \data ReflClosure (R : Nat -> Nat -> \Type) (x y : Nat)
   | refl (x = y)
   | inc (R x y)
 
-\func ReflClosure_<-isProp (n m : Nat) : isProp (ReflClosure (\lam x y => T (x < y)) n m) => {?}
+\func <=RC {R : Nat -> Nat -> \Type} {n m : Nat} (p : ReflClosure R n m) : \Type
+  | {R}, {_}, {_}, refl p => Unit
+  | {R}, {_}, {_}, inc r => Empty
 
-\func ReflClosure_<=-isNotProp (p : \Pi (n m : Nat) -> isProp (ReflClosure <= n m)) : Empty => {?}
+\func TisProp (b : Bool) : isProp (T b)
+  | false => \lam _ y => absurd y
+  | true => \lam x y => idp
+
+\func ReflClosure_<-isProp (n m : Nat) : isProp (ReflClosure (\lam x y => T (x < y)) n m)
+  => \lam a b => \case \elim a, \elim b \with {
+    | refl p, refl p1 => pmap refl (Nat-isSet n m p p1)
+    | refl p, inc r => \let
+      | zz => rewrite p r
+      | zzz => rewrite (n<n m) zz
+       \in absurd zzz
+    | inc r, refl p => \let
+      | zz => rewrite p r
+      | zzz => rewrite (n<n m) zz
+     \in absurd zzz
+    | inc r, inc r1 => pmap inc $ TisProp (n < m) r r1
+  }
+
+\func ReflClosure_<=-isNotProp (p : \Pi (n m : Nat) -> isProp (ReflClosure <= n m)) : Empty
+  => transport <=RC (p 0 0 (refl idp) (inc z<=n)) unit
 
 -- 8. Prove that if 'A' embeds in 'B' and 'B' is a proposition, then 'A' is proposition.
 
-\func sub-isProp {A B : \Type} (f : A -> B) (p : isInj f) (q : isProp B) : isProp A => {?}
+\func sub-isProp {A B : \Type} (f : A -> B) (p : isInj f) (q : isProp B) : isProp A
+  => \lam a b => p a b (q (f a) (f b))
+
+-- 9. Prove that a type with decidable equality is a set. Note that this implies 'isSet Nat' since
+-- we have already proved that 'Nat' has decidable equality.
+
+\func unyes {A : \Type} (w : Decide A) {a' : A} {p : w = yes a'} : A \elim w
+  | yes a => a
+  | no _x => absurd $ transport Dec-disc p ()
+
+\func Dec-disc {A : \Type} (w : Decide A) : \Type \elim w
+  | yes _ => Empty
+  | no  _ => \Sigma
+
+\func Dec-disc' {A : \Type} (w : Decide A) : \Type \elim w
+  | yes _ => \Sigma
+  | no  _ => Empty
+
+\import Data.Maybe
+
+\func just-inj {A : \Type} {a b : A} (p : just a = just b) : a = b
+  => pmap (\lam m => \case \elim m \with {
+    | nothing => b
+    | just a1 => a1
+  }) p
+
+\func yes-inj {A : \Type} {a b : A} (p : yes a = yes b) : a = b
+  => pmap (\lam m => \case \elim m \with {
+    | yes a1 => a1
+    | no _x => a
+  }) p
+
+
+--\func not-lemma (x : Bool) : not (not x) = x \elim x
+--  | false => idp
+--  | true => id
+
+\import Equiv.Univalence
+\import Equiv
+
+\func not (x : Bool) : Bool
+  | true => false
+  | false => true
+
+\func not-not (b : Bool) : not (not b) = b
+  | true => idp
+  | false => idp
+
+\func bool-not-iso : Bool = Bool => Equiv-to-= (\new Equiv {
+  | f => not
+  | ret => not
+  | ret_f => not-not
+  | sec => not
+  | f_sec => not-not
+})
+
+\func funExtInv {A B : \Type} {F G : A -> B} (p : F = G) : \Pi (x : A) -> F x = G x
+  => \lam x => path (\lam i => (p @ i) x)
+
+\func dec-isProp-bool=bool (p : isProp (Decide (Bool = Bool))) : Empty
+  => \let
+--    | b=b : Decide (Bool = Bool) => yes idp
+--    | b=b' : Decide (Bool = Bool) => yes bool-not-iso
+
+    | b=b : Bool = Bool => idp
+    | b=b' : Bool = Bool => bool-not-iso
+
+    | cont => p (yes b=b) (yes b=b')
+    | b=b-eq => =-to-Equiv b=b
+    | b=b'-eq => =-to-Equiv b=b'
+    | cont' => yes-inj cont
+    | ff : true = b=b-eq true => idp
+    | hh => pmap =-to-Equiv cont'
+--    | gg : b=b'-eq true = false => unfold =-to-Equiv $ {?}
+    | gg : b=b'-eq true = false => unfold b=b'-eq $ unfold b=b' $ unfold bool-not-iso $ unfold =-to-Equiv $ {?}
+--    | cont'-eq => =-to-Equiv cont'
+--    | t => ff *> (rewriteI cont' gg)
+    | hh' => pmap (\lam (x : Equiv {Bool} {Bool}) =>
+        \let
+          | p : Bool => (Map.f {x}) true
+          \in
+        p
+    ) hh
+--    | hh' => path (\lam i => Equiv.f {hh @ i} (unfold {?}))
+    \in
+     {?}
+
+\func dec-isProp-naeb : \Sigma (A : \Type) (x y : A) (p : isProp (Decide (x = y)) -> Empty)
+  => (\Type, Bool, Bool, dec-isProp-bool=bool)
+--
+--\func dec-isProp {A : \Type} (x y : A) : isProp (Decide (x = y))
+--  => \lam a b => \case \elim a, \elim b \with {
+--    | yes a, yes a1 => absurd $ dec-isProp-bool=bool
+--    | yes a, no _x => {?}
+--    | no _x, yes a => {?}
+--    | no _x, no _x1 => {?}
+--  }
+
+\func J
+  {A : \Type} {a : A}
+  (B : \Pi (a' : A) -> a = a' -> \Type)
+  (b : B a idp)
+  {a' : A} (p : a = a')
+  : B a' p
+  -- the details of the definition are not important for now
+  => coe (\lam i => B (p @ i) (psqueeze p i)) b right
+  \where
+    \func psqueeze  {A : \Type} {a a' : A} (p : a = a') (i : I) : a = p @ i => path (\lam j => p @ I.squeeze i j)
+
+\func Jalt {A : \Type} (B : \Pi (a a' : A) -> a = a' -> \Type)
+           (b : \Pi (a : A) -> B a a idp)
+           {a a' : A} (p : a = a') : B a a' p => J (B a) (b a) p
+
+--\func sigma-contr {A : \Type} {a : A}
+--                  (p : \Sigma (x : A) (a = x))
+--  : (a,idp) = {\Sigma (x : A) (a = x)} p
+--  => Jalt (\lam y z q => (y,idp) = {\Sigma (x : A) (y = x)} (z, q)) (\lam x => idp) p.2
+
+\func ez : idp {_} {0} = idp => idp
 
 -- 9. Prove that a type with decidable equality is a set. Note that this implies 'isSet Nat' since
 -- we have already proved that 'Nat' has decidable equality.
 
 \func Dec-isSet {A : \Type} (dec : \Pi (x y : A) -> Decide (x = y)) : isSet A
+  => DNE-eq->Set (\lam x y => Decide->DNE (dec x y))
+
+
+\func sda {A : \Type} {a : A} {b : A}
+          (peq : a = a)
+          (ppeq : peq = idp)
+          (p1 : a = b) (p2 : a = b)
+  : p1 = p2
+  => {?}
+
+\func pi {A : \Type} {a : A}
+         (d : \Pi (x y : A) -> Decide (x = y))
+         (peq : a = a)
+  : peq = idp
   => {?}
 
 -- 10. Prove that if 'A' and 'B' are sets, then A `Either` B is also a set.

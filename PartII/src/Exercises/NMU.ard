@@ -9,7 +9,7 @@
 \import Paths
 \import Set
 
--- Task 1. Define all different semigroup structures on set of 2 elementents.
+-- Task 1. Define all different groups structures on set of 2 elementents.
 
 \module task1 \where {
   \instance BoolDecSet : DecSet Bool

@@ -42,7 +42,6 @@
 \func deMorgan (A B C : \Prop) : (\Sigma A (B `Or` C)) <-> ((\Sigma A B) `Or` (\Sigma A C)) => {?}
 
 -- 4. Define eliminator for 'Or' via 'Or-rec' not using pattern matching on 'Or'.
-
 \func Or-elim {A B : \Prop} (C : Or A B -> \Prop)
               (f : \Pi (x : A) -> C (inl x)) (g : \Pi (y : B) -> C (inr y))
               (p : A `Or` B) : C p => {?}
